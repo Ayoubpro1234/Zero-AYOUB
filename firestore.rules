@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Health / connectivity check document
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // User Profile Document
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      // Trigger subcollection
+      match /triggers/{triggerId} {
+        allow read, write: if isOwner(userId) && isValidId(triggerId);
+      }
+
+      // Interventions subcollection
+      match /interventions/{interventionId} {
+        allow read, write: if isOwner(userId) && isValidId(interventionId);
+      }
+
+      // Slips subcollection
+      match /slips/{slipId} {
+        allow read, write: if isOwner(userId) && isValidId(slipId);
+      }
+
+      // Missions subcollection
+      match /missions/{missionId} {
+        allow read, write: if isOwner(userId) && isValidId(missionId);
+      }
+
+      // Atomic Rewards subcollection
+      match /rewards/{rewardId} {
+        allow read, write: if isOwner(userId) && isValidId(rewardId);
+      }
+    }
+  }
+}

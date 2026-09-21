@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-arabic: 'Tajawal', system-ui, -apple-system, sans-serif;
+    --font-latin: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    font-family: 'Tajawal', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #090a0f;
+    color: #e2e8f0;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090a0f;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e2436;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333d59;
+}
+
+/* Pulse glow for emergency elements */
+@keyframes emergency-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px -3px rgba(239, 68, 68, 0.4), 0 0 6px 0px rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 35px 2px rgba(239, 68, 68, 0.7), 0 0 12px 2px rgba(239, 68, 68, 0.4);
+  }
+}
+
+.pulse-emergency {
+  animation: emergency-pulse 2s infinite ease-in-out;
+}
+
+/* Breath circle animations */
+@keyframes breath-cycle {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  40% { transform: scale(1.15); opacity: 1; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.85); opacity: 0.7; }
+}
+
+.animate-breath {
+  animation: breath-cycle 12s infinite ease-in-out;
+}

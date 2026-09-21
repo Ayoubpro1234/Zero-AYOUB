@@ -1,0 +1,6 @@
+{
+  "name": "ZERO — Urge Interceptor",
+  "description": "تطبيق تدخلي وقائي لكسر سلاسل الإلحاح والسلوكيات القهرية وحماية اللحظة التالية عبر بروتوكول 90 ثانية المنقذ.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

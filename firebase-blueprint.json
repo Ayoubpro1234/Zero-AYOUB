@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User preferences and aggregate progress",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "streakDays": { "type": "number" },
+        "longestStreakDays": { "type": "number" },
+        "urgesInterrupted": { "type": "number" },
+        "interventionsCompleted": { "type": "number" },
+        "successfulNights": { "type": "number" },
+        "searchStoppedEvents": { "type": "number" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "levelTitle": { "type": "string" },
+        "language": { "type": "string" },
+        "nightMode": { "type": "boolean" },
+        "emergencyReminderMinutes": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "xp", "level"]
+    },
+    "TriggerLog": {
+      "title": "TriggerLog",
+      "description": "Privately logged urge and trigger events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "trigger": { "type": "string" },
+        "location": { "type": "string" },
+        "beforeEvent": { "type": "string" },
+        "intensity": { "type": "number" },
+        "note": { "type": "string" },
+        "interrupted": { "type": "boolean" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "userId", "trigger", "intensity"]
+    },
+    "InterventionLog": {
+      "title": "InterventionLog",
+      "description": "Log of completed 90s or mini-mission interventions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "category": { "type": "string" },
+        "actionTitle": { "type": "string" },
+        "outcome": { "type": "string" },
+        "success": { "type": "boolean" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "userId", "category", "outcome"]
+    },
+    "SlipReflection": {
+      "title": "SlipReflection",
+      "description": "Non-judgmental post-slip analysis and reset plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "trigger": { "type": "string" },
+        "location": { "type": "string" },
+        "escalationEvent": { "type": "string" },
+        "interruptPoint": { "type": "string" },
+        "nextTimePlan": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "userId", "trigger", "nextTimePlan"]
+    },
+    "DailyMission": {
+      "title": "DailyMission",
+      "description": "Daily prevention and boredom-killer tasks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "period": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "googleTaskId": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "completed"]
+    },
+    "RewardReceipt": {
+      "title": "RewardReceipt",
+      "description": "Idempotent, atomic XP reward audit receipt",
+      "type": "object",
+      "properties": {
+        "rewardKey": { "type": "string" },
+        "userId": { "type": "string" },
+        "xp": { "type": "number" },
+        "awardedAt": { "type": "string" }
+      },
+      "required": ["rewardKey", "userId", "xp", "awardedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile, streak, and progress metrics"
+    },
+    "/users/{userId}/triggers/{triggerId}": {
+      "schema": "TriggerLog",
+      "description": "Private trigger journal entries"
+    },
+    "/users/{userId}/interventions/{interventionId}": {
+      "schema": "InterventionLog",
+      "description": "Completed urge interventions and effectiveness"
+    },
+    "/users/{userId}/slips/{slipId}": {
+      "schema": "SlipReflection",
+      "description": "Non-judgmental slip reflections"
+    },
+    "/users/{userId}/missions/{missionId}": {
+      "schema": "DailyMission",
+      "description": "Daily prevention and boredom-killer tasks"
+    },
+    "/users/{userId}/rewards/{rewardId}": {
+      "schema": "RewardReceipt",
+      "description": "Atomic idempotent reward receipts preventing double-crediting"
+    }
+  }
+}
