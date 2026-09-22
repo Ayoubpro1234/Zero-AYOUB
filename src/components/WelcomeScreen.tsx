@@ -19,6 +19,7 @@ import {
 interface WelcomeScreenProps {
   onGetStarted: () => void;
   onSignIn: () => void;
+  onContinueAsGuest?: () => void;
 }
 
 const ZERO_BENEFITS = [
@@ -57,6 +58,7 @@ const ZERO_BENEFITS = [
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onGetStarted,
   onSignIn,
+  onContinueAsGuest,
 }) => {
   return (
     <div
@@ -280,26 +282,41 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.38 }}
-          className="w-full max-w-sm flex flex-col sm:flex-row items-stretch justify-center gap-3 sm:gap-4 mb-6"
+          className="w-full max-w-md flex flex-col items-center justify-center gap-3 sm:gap-3.5 mb-6"
         >
-          {/* Primary CTA */}
-          <button
-            id="btn-welcome-get-started"
-            onClick={onGetStarted}
-            className="flex-1 py-3.5 sm:py-4 px-6 rounded-2xl bg-gradient-to-r from-red-600 via-red-500 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-base sm:text-lg shadow-xl shadow-red-950/60 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-          >
-            <span>ابدأ مع ZERO</span>
-            <ChevronLeft className="w-5 h-5 text-red-200" />
-          </button>
+          <div className="w-full flex flex-col sm:flex-row items-stretch justify-center gap-3 sm:gap-4">
+            {/* Primary CTA */}
+            <button
+              id="btn-welcome-get-started"
+              onClick={onGetStarted}
+              className="flex-1 py-3.5 sm:py-4 px-6 rounded-2xl bg-gradient-to-r from-red-600 via-red-500 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-base sm:text-lg shadow-xl shadow-red-950/60 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+            >
+              <span>ابدأ مع ZERO</span>
+              <ChevronLeft className="w-5 h-5 text-red-200" />
+            </button>
 
-          {/* Secondary CTA */}
-          <button
-            id="btn-welcome-has-account"
-            onClick={onSignIn}
-            className="py-3.5 sm:py-4 px-6 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-sm sm:text-base border border-slate-800 hover:border-slate-700 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-          >
-            <span>لدي حساب بالفعل</span>
-          </button>
+            {/* Secondary CTA */}
+            <button
+              id="btn-welcome-has-account"
+              onClick={onSignIn}
+              className="py-3.5 sm:py-4 px-6 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-sm sm:text-base border border-slate-800 hover:border-slate-700 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+            >
+              <span>تسجيل الدخول</span>
+            </button>
+          </div>
+
+          {/* Guest Mode Direct Access */}
+          {onContinueAsGuest && (
+            <button
+              id="btn-welcome-guest"
+              type="button"
+              onClick={onContinueAsGuest}
+              className="text-xs sm:text-sm font-semibold text-slate-400 hover:text-emerald-400 transition-colors flex items-center gap-1.5 py-1 px-3 rounded-lg hover:bg-slate-900/60"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>المتابعة مباشرة كضيف محلياً (بدون حساب)</span>
+            </button>
+          )}
         </motion.div>
 
         {/* Core Principles Row */}

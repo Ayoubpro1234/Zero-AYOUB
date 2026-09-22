@@ -76,6 +76,13 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('zero_guest_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   const [profile, setProfile] = useState<UserProfile>(() => loadUserProfile());
   const [language, setLanguage] = useState<Language>(() => profile.language || 'ar');
@@ -273,6 +280,12 @@ export default function App() {
 
   // Sign In handler directly from modal or buttons
   const handleAuthSuccess = async (user: User, token: string | null) => {
+    try {
+      localStorage.removeItem('zero_guest_mode');
+    } catch {
+      // Storage fallback
+    }
+    setIsGuestMode(false);
     setCurrentUser(user);
     if (token) setAccessToken(token);
     setActiveUserUid(user.uid);
@@ -310,6 +323,25 @@ export default function App() {
     }
   };
 
+  const handleContinueAsGuest = () => {
+    try {
+      localStorage.setItem('zero_guest_mode', 'true');
+    } catch {
+      // Storage fallback
+    }
+    setIsGuestMode(true);
+    setActiveUserUid('local_user_zero');
+    const localProf = loadUserProfile('local_user_zero');
+    setProfile(localProf);
+    setMissions(loadDailyMissions('local_user_zero'));
+    setInterventionLogs(loadInterventions('local_user_zero'));
+    if (!localProf.onboardingCompleted) {
+      setIsOnboardingModalOpen(true);
+    } else {
+      showToast('مرحباً بك في ZERO كضيف محلي 🛡️');
+    }
+  };
+
   const handleGoogleSignInClick = () => {
     setIsAuthModalOpen(true);
   };
@@ -328,7 +360,7 @@ export default function App() {
         onboardingCompleted: true,
         hasReceivedWelcomeBonus: true,
       },
-      currentUser?.uid
+      currentUser?.uid || 'local_user_zero'
     );
     setProfile(updated);
 
@@ -346,12 +378,18 @@ export default function App() {
   // Sign Out handler
   const handleSignOut = async () => {
     await logout();
+    try {
+      localStorage.removeItem('zero_guest_mode');
+    } catch {
+      // Storage fallback
+    }
+    setIsGuestMode(false);
     setCurrentUser(null);
     setAccessToken(null);
     resetToLocalGuestState();
     setIsAuthModalOpen(false);
     setIsOnboardingModalOpen(false);
-    showToast(language === 'ar' ? 'تم تسجيل الخروج بنجاح.' : 'Logged out successfully.');
+    showToast(language === 'ar' ? 'تم تسجيل الخروج بنجاح.' : 'Signed out successfully.');
   };
 
   // Change language
@@ -588,18 +626,20 @@ export default function App() {
   }
 
   // 2. Unauthenticated First Screen: ZERO Welcome Screen
-  if (!currentUser) {
+  if (!currentUser && !isGuestMode) {
     return (
       <>
         <WelcomeScreen
           onGetStarted={() => setIsAuthModalOpen(true)}
           onSignIn={() => setIsAuthModalOpen(true)}
+          onContinueAsGuest={handleContinueAsGuest}
         />
 
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onAuthSuccess={handleAuthSuccess}
+          onContinueAsGuest={handleContinueAsGuest}
         />
       </>
     );

@@ -42,6 +42,14 @@ jobs:
         run: bun install --frozen-lockfile || bun install
 
       - name: Build Web Application
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyAOuQvEu4W12D9-ioUzX4ZGopeI6Wc83eo' }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN || 'vigilant-sol-359120.firebaseapp.com' }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID || 'vigilant-sol-359120' }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET || 'vigilant-sol-359120.appspot.com' }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID || '518349729896' }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID || '1:518349729896:web:8fd8dcb8e50daf21fb4bdd' }}
+          VITE_FIREBASE_DATABASE_ID: ${{ vars.VITE_FIREBASE_DATABASE_ID || '(default)' }}
         run: bun run build
 
       - name: Sync Capacitor Android

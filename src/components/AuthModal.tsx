@@ -17,12 +17,14 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAuthSuccess: (user: User, token: string | null) => void;
+  onContinueAsGuest?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onAuthSuccess,
+  onContinueAsGuest,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -50,6 +52,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGuestClick = () => {
+    if (onContinueAsGuest) {
+      onContinueAsGuest();
+      onClose();
     }
   };
 
@@ -94,15 +103,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             دخل لحسابك باش تبقى بياناتك وتقدمك محفوظين.
           </p>
 
-          {/* Error Banner */}
+          {/* Error Banner with Instant Guest Bypass */}
           {errorMessage && (
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3.5 mb-5 rounded-2xl bg-red-950/60 border border-red-800/60 text-red-200 text-xs font-medium flex items-start gap-2.5 text-right"
+              className="p-3.5 mb-5 rounded-2xl bg-red-950/60 border border-red-800/60 text-red-200 text-xs font-medium flex flex-col gap-2.5 text-right"
             >
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <div className="leading-relaxed flex-1">{errorMessage}</div>
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="leading-relaxed flex-1">{errorMessage}</div>
+              </div>
+              {onContinueAsGuest && (
+                <button
+                  type="button"
+                  onClick={handleGuestClick}
+                  className="w-full py-2 px-3 rounded-xl bg-red-900/60 hover:bg-red-800/80 border border-red-700/60 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>تخطي المشكلة والدخول كضيف محلياً الآن</span>
+                </button>
+              )}
             </motion.div>
           )}
 
@@ -111,7 +132,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             id="btn-auth-google-submit"
             onClick={handleSignIn}
             disabled={isLoading}
-            className="w-full py-3.5 sm:py-4 px-5 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed group mb-4"
+            className="w-full py-3.5 sm:py-4 px-5 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed group mb-3"
           >
             {isLoading ? (
               <>
@@ -144,10 +165,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
           </button>
 
+          {/* Guest / Offline Mode Option */}
+          {onContinueAsGuest && (
+            <button
+              id="btn-auth-guest-mode"
+              type="button"
+              onClick={handleGuestClick}
+              disabled={isLoading}
+              className="w-full py-3 px-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs sm:text-sm border border-slate-800 transition mb-4 flex items-center justify-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>المتابعة كضيف محلياً (بدون حساب)</span>
+            </button>
+          )}
+
           {/* Privacy & Reassurance */}
           <div className="pt-2 border-t border-slate-900/80 flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-medium">
             <Lock className="w-3.5 h-3.5 text-emerald-400" />
-            <span>بياناتك شخصية ومخصصة لحسابك.</span>
+            <span>بياناتك شخصية ومخصصة لجهازك وحسابك.</span>
           </div>
         </motion.div>
       </div>

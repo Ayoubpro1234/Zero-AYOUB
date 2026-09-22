@@ -4,6 +4,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  signInAnonymously,
   GoogleAuthProvider,
   onAuthStateChanged,
   User,
@@ -78,7 +79,12 @@ export const activeFirebaseConfig = getResolvedFirebaseConfig();
 
 // Initialize Firebase App
 const app = initializeApp(activeFirebaseConfig);
-const dbDatabaseId = activeFirebaseConfig.firestoreDatabaseId;
+const dbDatabaseId =
+  activeFirebaseConfig.firestoreDatabaseId &&
+  activeFirebaseConfig.firestoreDatabaseId !== '(default)' &&
+  activeFirebaseConfig.firestoreDatabaseId.trim() !== ''
+    ? activeFirebaseConfig.firestoreDatabaseId
+    : undefined;
 
 // Initialize Firestore with experimentalForceLongPolling to eliminate WebChannel hanging in iframe/proxy environments
 export const db = dbDatabaseId
@@ -108,14 +114,20 @@ export function formatAuthError(error: unknown): string {
     code === 'auth/popup-blocked' ||
     message.includes('auth/popup-blocked')
   ) {
-    return 'تم حظر النافذة المنبثقة بواسطة المتصفح. يُرجى السماح بالنوافذ المنبثقة والمحاولة مجدداً.';
+    return 'تم حظر النافذة المنبثقة بواسطة المتصفح. يُرجى السماح بالنوافذ المنبثقة والمحاولة مجدداً أو المتابعة في نافذة جديدة.';
   }
-  if (code === 'auth/unauthorized-domain' || message.includes('auth/unauthorized-domain')) {
+  if (
+    code === 'auth/invalid-continue-uri' ||
+    message.includes('auth/invalid-continue-uri') ||
+    message.includes('invalid-continue-uri') ||
+    code === 'auth/unauthorized-domain' ||
+    message.includes('auth/unauthorized-domain')
+  ) {
     const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'النطاق الحالي';
-    return `النطاق الحالي (${currentHost}) غير مصرح به في إعدادات مشروع Firebase المستخدم (${activeFirebaseConfig.projectId}). إذا كنت تستخدم مشروع vigilant-sol-359120، يرجى ضبط متغيرات البيئة VITE_FIREBASE_* في Vercel.`;
+    return `تعذر المصادقة عبر Google بسبب عدم إدراج النطاق (${currentHost}) في قائمة النطاقات المصرح بها (Authorized Domains) بمشروع Firebase (${activeFirebaseConfig.projectId}). يمكنك المتابعة فوراً كضيف بكامل مميزات التطبيق محلياً.`;
   }
   if (code === 'auth/operation-not-allowed' || message.includes('operation-not-allowed')) {
-    return 'تسجيل الدخول عبر Google غير مفعّل في لوحة تحكم Firebase لهذا المشروع.';
+    return 'تسجيل الدخول عبر Google غير مفعّل في لوحة تحكم Firebase لهذا المشروع. يمكنك المتابعة كضيف.';
   }
   if (
     code === 'auth/user-disabled' ||
@@ -128,7 +140,7 @@ export function formatAuthError(error: unknown): string {
   if (code === 'auth/network-request-failed') {
     return 'حدث خطأ في الاتصال بالإنترنت. يرجى التحقق من الشبكة وإعادة المحاولة.';
   }
-  return 'تعذر تسجيل الدخول. حاول مرة أخرى.';
+  return 'تعذر تسجيل الدخول. حاول مرة أخرى أو تابع كضيف.';
 }
 
 export function handleFirestoreError(
@@ -186,18 +198,24 @@ export const initAuth = (
   onAuthSuccess?: (user: User, token: string | null) => void,
   onAuthFailure?: () => void
 ) => {
-  // Check if returning from a Google redirect flow
-  getRedirectResult(auth)
-    .then((result) => {
-      if (result) {
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        cachedAccessToken = credential?.accessToken || null;
-        if (onAuthSuccess) onAuthSuccess(result.user, cachedAccessToken);
-      }
-    })
-    .catch((err) => {
-      console.warn('Redirect auth check notice:', err?.message || err);
-    });
+  // Check if returning from a Google redirect flow only when safely in a standalone window
+  if (typeof window !== 'undefined' && !isInIframe()) {
+    try {
+      getRedirectResult(auth)
+        .then((result) => {
+          if (result) {
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            cachedAccessToken = credential?.accessToken || null;
+            if (onAuthSuccess) onAuthSuccess(result.user, cachedAccessToken);
+          }
+        })
+        .catch((err) => {
+          console.warn('Redirect auth check notice (safely ignored):', err?.message || err);
+        });
+    } catch (e) {
+      console.warn('getRedirectResult notice:', e);
+    }
+  }
 
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
@@ -209,11 +227,16 @@ export const initAuth = (
   });
 };
 
-// Google Sign-In with popup & smart redirect fallback
+// Google Sign-In with popup & smart recovery
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string | null } | null> => {
   try {
     isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
+    const googleProvider = new GoogleAuthProvider();
+    googleProvider.addScope('email');
+    googleProvider.addScope('profile');
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+    const result = await signInWithPopup(auth, googleProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     cachedAccessToken = credential?.accessToken || null;
     return { user: result.user, accessToken: cachedAccessToken };
@@ -222,15 +245,6 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
 
     if (isPopupBlockedError(error)) {
       console.warn('Google Sign-In popup was blocked by browser. Showing recovery guidance.');
-      // If running outside an iframe (e.g., standard browser tab), attempt redirect seamlessly
-      if (!isInIframe()) {
-        try {
-          await signInWithRedirect(auth, provider);
-          return null;
-        } catch (redirectErr) {
-          console.warn('Redirect sign-in fallback notice:', redirectErr);
-        }
-      }
       throw error;
     }
 
@@ -243,6 +257,17 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     throw error;
   } finally {
     isSigningIn = false;
+  }
+};
+
+// Anonymous sign-in for seamless offline/guest mode with unique Firebase UID
+export const anonymousSignIn = async (): Promise<{ user: User; accessToken: string | null } | null> => {
+  try {
+    const cred = await signInAnonymously(auth);
+    return { user: cred.user, accessToken: null };
+  } catch (error) {
+    console.warn('Anonymous sign-in fallback notice:', error);
+    throw error;
   }
 };
 
