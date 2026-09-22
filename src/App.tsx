@@ -69,6 +69,7 @@ import { SettingsView } from './components/SettingsView';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { AuthModal } from './components/AuthModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { initCapacitorPlugins } from './lib/capacitor';
 import { Shield, Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -205,6 +206,54 @@ export default function App() {
 
     return () => unsubscribe();
   }, [resetToLocalGuestState]);
+
+  // Android Native Back Navigation & Status Bar Handling
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    initCapacitorPlugins({
+      hasOpenModal: () => Boolean(
+        isEmergencyOpen ||
+        isAntiSearchOpen ||
+        isTriggerJournalOpen ||
+        isSlipModalOpen ||
+        isRelapseModalOpen ||
+        isAuthModalOpen ||
+        isOnboardingModalOpen ||
+        isPopupBlockedModalOpen ||
+        celebrationMilestone !== null
+      ),
+      closeTopModal: () => {
+        if (celebrationMilestone !== null) setCelebrationMilestone(null);
+        else if (isPopupBlockedModalOpen) setIsPopupBlockedModalOpen(false);
+        else if (isAuthModalOpen) setIsAuthModalOpen(false);
+        else if (isOnboardingModalOpen) setIsOnboardingModalOpen(false);
+        else if (isEmergencyOpen) setIsEmergencyOpen(false);
+        else if (isAntiSearchOpen) setIsAntiSearchOpen(false);
+        else if (isTriggerJournalOpen) setIsTriggerJournalOpen(false);
+        else if (isSlipModalOpen) setIsSlipModalOpen(false);
+        else if (isRelapseModalOpen) setIsRelapseModalOpen(false);
+      },
+      canNavigateBack: () => activeTab !== 'home',
+      navigateBack: () => setActiveTab('home'),
+    }).then((unsub) => {
+      cleanup = unsub;
+    });
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [
+    isEmergencyOpen,
+    isAntiSearchOpen,
+    isTriggerJournalOpen,
+    isSlipModalOpen,
+    isRelapseModalOpen,
+    isAuthModalOpen,
+    isOnboardingModalOpen,
+    isPopupBlockedModalOpen,
+    celebrationMilestone,
+    activeTab,
+  ]);
 
   // Update profile helper
   const updateProfile = (updater: (prev: UserProfile) => UserProfile) => {
