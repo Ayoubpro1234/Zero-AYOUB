@@ -50,9 +50,35 @@ export interface FirestoreErrorInfo {
   };
 }
 
+// Parse optional VITE_FIREBASE_CONFIG JSON or individual VITE_FIREBASE_* variables
+const getResolvedFirebaseConfig = () => {
+  const env = (import.meta.env as unknown as Record<string, string | undefined>) || {};
+  let envJsonConfig: Record<string, string> = {};
+
+  if (env.VITE_FIREBASE_CONFIG) {
+    try {
+      envJsonConfig = JSON.parse(env.VITE_FIREBASE_CONFIG);
+    } catch (e) {
+      console.warn('Failed to parse VITE_FIREBASE_CONFIG JSON:', e);
+    }
+  }
+
+  return {
+    apiKey: env.VITE_FIREBASE_API_KEY || envJsonConfig.apiKey || firebaseConfig.apiKey,
+    authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || envJsonConfig.authDomain || firebaseConfig.authDomain,
+    projectId: env.VITE_FIREBASE_PROJECT_ID || envJsonConfig.projectId || firebaseConfig.projectId,
+    storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || envJsonConfig.storageBucket || firebaseConfig.storageBucket,
+    messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || envJsonConfig.messagingSenderId || firebaseConfig.messagingSenderId,
+    appId: env.VITE_FIREBASE_APP_ID || envJsonConfig.appId || firebaseConfig.appId,
+    firestoreDatabaseId: env.VITE_FIREBASE_DATABASE_ID || env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || envJsonConfig.firestoreDatabaseId || (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId,
+  };
+};
+
+export const activeFirebaseConfig = getResolvedFirebaseConfig();
+
 // Initialize Firebase App
-const app = initializeApp(firebaseConfig);
-const dbDatabaseId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
+const app = initializeApp(activeFirebaseConfig);
+const dbDatabaseId = activeFirebaseConfig.firestoreDatabaseId;
 
 // Initialize Firestore with experimentalForceLongPolling to eliminate WebChannel hanging in iframe/proxy environments
 export const db = dbDatabaseId
@@ -84,14 +110,20 @@ export function formatAuthError(error: unknown): string {
   ) {
     return 'تم حظر النافذة المنبثقة بواسطة المتصفح. يُرجى السماح بالنوافذ المنبثقة والمحاولة مجدداً.';
   }
+  if (code === 'auth/unauthorized-domain' || message.includes('auth/unauthorized-domain')) {
+    const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'النطاق الحالي';
+    return `النطاق الحالي (${currentHost}) غير مصرح به في إعدادات مشروع Firebase المستخدم (${activeFirebaseConfig.projectId}). إذا كنت تستخدم مشروع vigilant-sol-359120، يرجى ضبط متغيرات البيئة VITE_FIREBASE_* في Vercel.`;
+  }
+  if (code === 'auth/operation-not-allowed' || message.includes('operation-not-allowed')) {
+    return 'تسجيل الدخول عبر Google غير مفعّل في لوحة تحكم Firebase لهذا المشروع.';
+  }
   if (
-    code === 'auth/unauthorized-domain' ||
     code === 'auth/user-disabled' ||
     code === 'auth/access-denied' ||
     message.includes('403') ||
     message.includes('access_denied')
   ) {
-    return 'هذا الحساب غير مسموح له حالياً بالدخول إلى النسخة التجريبية.';
+    return 'هذا الحساب غير مسموح له حالياً بالدخول.';
   }
   if (code === 'auth/network-request-failed') {
     return 'حدث خطأ في الاتصال بالإنترنت. يرجى التحقق من الشبكة وإعادة المحاولة.';

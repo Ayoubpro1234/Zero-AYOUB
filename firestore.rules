@@ -26,35 +26,31 @@ service cloud.firestore {
 
     // User Profile Document
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidId(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow read, write: if isOwner(userId);
 
       // Trigger subcollection
       match /triggers/{triggerId} {
-        allow read, write: if isOwner(userId) && isValidId(triggerId);
+        allow read, write: if isOwner(userId);
       }
 
       // Interventions subcollection
       match /interventions/{interventionId} {
-        allow read, write: if isOwner(userId) && isValidId(interventionId);
+        allow read, write: if isOwner(userId);
       }
 
       // Slips subcollection
       match /slips/{slipId} {
-        allow read, write: if isOwner(userId) && isValidId(slipId);
+        allow read, write: if isOwner(userId);
       }
 
       // Missions subcollection
       match /missions/{missionId} {
-        allow read, write: if isOwner(userId) && isValidId(missionId);
+        allow read, write: if isOwner(userId);
       }
 
       // Atomic Rewards subcollection
       match /rewards/{rewardId} {
-        allow read, write: if isOwner(userId) && isValidId(rewardId);
+        allow read, write: if isOwner(userId);
       }
     }
   }

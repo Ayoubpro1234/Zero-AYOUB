@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Flame,
 } from 'lucide-react';
-import { googleSignIn, isPopupBlockedError } from '../lib/firebase';
+import { googleSignIn, isPopupBlockedError, formatAuthError } from '../lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -46,16 +46,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (isPopupBlockedError(err)) {
         setErrorMessage('تم حظر النافذة المنبثقة بواسطة المتصفح. يرجى السماح بالنوافذ المنبثقة ثم المحاولة ثانية.');
       } else {
-        const error = err as { code?: string; message?: string };
-        if (error?.code === 'auth/popup-closed-by-user') {
-          setErrorMessage('تم إلغاء تسجيل الدخول.');
-        } else if (error?.code === 'auth/cancelled-popup-request') {
-          setErrorMessage('تم إلغاء العملية، يرجى إعادة المحاولة.');
-        } else if (error?.code === 'auth/network-request-failed') {
-          setErrorMessage('تعذر الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.');
-        } else {
-          setErrorMessage('تعذر تسجيل الدخول. حاول مرة أخرى.');
-        }
+        setErrorMessage(formatAuthError(err));
       }
     } finally {
       setIsLoading(false);
