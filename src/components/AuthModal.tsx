@@ -44,7 +44,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setErrorMessage('تم إلغاء تسجيل الدخول.');
       }
     } catch (err: unknown) {
-      console.error('Google Sign In Error:', err);
+      console.warn('Google Sign In notice:', err);
       if (isPopupBlockedError(err)) {
         setErrorMessage('تم حظر النافذة المنبثقة بواسطة المتصفح. يرجى السماح بالنوافذ المنبثقة ثم المحاولة ثانية.');
       } else {

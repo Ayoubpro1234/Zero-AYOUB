@@ -5,11 +5,14 @@ import {
   signInWithRedirect,
   getRedirectResult,
   signInAnonymously,
+  signInWithCredential,
   GoogleAuthProvider,
   onAuthStateChanged,
   User,
   signOut,
 } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
   initializeFirestore,
   getFirestore,
@@ -118,12 +121,17 @@ export function formatAuthError(error: unknown): string {
   }
   if (
     code === 'auth/invalid-continue-uri' ||
+    code === 'auth/unauthorized-continue-uri' ||
     message.includes('auth/invalid-continue-uri') ||
+    message.includes('auth/unauthorized-continue-uri') ||
     message.includes('invalid-continue-uri') ||
     code === 'auth/unauthorized-domain' ||
     message.includes('auth/unauthorized-domain')
   ) {
     const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'النطاق الحالي';
+    if (isInIframe()) {
+      return `بيئة المعاينة داخل الإطار (iframe) تمنع إكمال مصادقة Google بسبب عزل النطاق (${currentHost}). يمكنك استخدام التطبيق فوراً كضيف محلياً أو فتحه في نافذة مستقلة.`;
+    }
     return `تعذر المصادقة عبر Google بسبب عدم إدراج النطاق (${currentHost}) في قائمة النطاقات المصرح بها (Authorized Domains) بمشروع Firebase (${activeFirebaseConfig.projectId}). يمكنك المتابعة فوراً كضيف بكامل مميزات التطبيق محلياً.`;
   }
   if (code === 'auth/operation-not-allowed' || message.includes('operation-not-allowed')) {
@@ -227,10 +235,41 @@ export const initAuth = (
   });
 };
 
-// Google Sign-In with popup & smart recovery
+// Google Sign-In with native Capacitor support on mobile & popup on Web
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string | null } | null> => {
   try {
     isSigningIn = true;
+
+    // 1. Native Mobile Platform (Android / iOS) via Capacitor
+    if (Capacitor.isNativePlatform()) {
+      const result = await FirebaseAuthentication.signInWithGoogle({
+        scopes: ['email', 'profile'],
+      });
+
+      if (result?.credential?.idToken) {
+        const credential = GoogleAuthProvider.credential(
+          result.credential.idToken,
+          result.credential.accessToken
+        );
+        const authResult = await signInWithCredential(auth, credential);
+        cachedAccessToken = result.credential.accessToken || null;
+        return { user: authResult.user, accessToken: cachedAccessToken };
+      } else if (result?.user) {
+        try {
+          const tokenRes = await FirebaseAuthentication.getIdToken();
+          if (tokenRes?.token) {
+            const credential = GoogleAuthProvider.credential(tokenRes.token);
+            const authResult = await signInWithCredential(auth, credential);
+            return { user: authResult.user, accessToken: null };
+          }
+        } catch (tokenErr) {
+          console.warn('Could not bridge native token:', tokenErr);
+        }
+      }
+      return null;
+    }
+
+    // 2. Web / Vercel Environment (Web browser popup)
     const googleProvider = new GoogleAuthProvider();
     googleProvider.addScope('email');
     googleProvider.addScope('profile');
@@ -248,7 +287,15 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
       throw error;
     }
 
-    if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+    if (
+      err.code === 'auth/popup-closed-by-user' ||
+      err.code === 'auth/cancelled-popup-request' ||
+      err.message?.includes('12501') ||
+      err.message?.includes('16') ||
+      err.message?.includes('SIGN_IN_CANCELLED') ||
+      err.message?.includes('canceled') ||
+      err.message?.includes('cancelled')
+    ) {
       console.warn('Google Sign-In was dismissed by user.');
       return null;
     }
@@ -276,6 +323,13 @@ export const getAccessToken = async (): Promise<string | null> => {
 };
 
 export const logout = async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await FirebaseAuthentication.signOut();
+    } catch (e) {
+      console.warn('Native signOut notice:', e);
+    }
+  }
   await signOut(auth);
   cachedAccessToken = null;
 };
